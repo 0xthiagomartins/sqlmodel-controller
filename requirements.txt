@@ -1,0 +1,6 @@
+mysql-connector-python
+sqlmodel
+pydantic
+sqlalchemy-utils
+sqlalchemy-json
+pytz
