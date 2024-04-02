@@ -129,14 +129,7 @@ class Dao:
 
         return query.first()
 
-    def list(
-        self,
-        filter: Dict = {},
-        order: Dict = {},
-        joins: Optional[List[str]] = None,
-    ):
-        query = self.db_session.query(self.model_class)
-
+    def __apply_filter(self, query, filter):
         """
         Example:
 
@@ -214,7 +207,16 @@ class Dao:
                     query = query.filter(and_(*range_filters))
             else:
                 query = query.filter(getattr(self.model_class, key) == value)
+        return query
 
+    def list(
+        self,
+        filter: Dict = {},
+        order: Dict = {},
+        joins: Optional[List[str]] = None,
+    ):
+        query = self.db_session.query(self.model_class)
+        query = self.__apply_filter(query, filter)
         if joins:
             query = apply_joins(query, self.model_class, joins)
         """
