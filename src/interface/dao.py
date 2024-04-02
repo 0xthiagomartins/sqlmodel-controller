@@ -24,38 +24,6 @@ def apply_nested_joins(relationship_attr, inner_joins):
         return joinedload(relationship_attr)
 
 
-def apply_joins(query, model_class, joins):
-    for join in joins:
-        if isinstance(join, list):
-            # If join is a list, the first element is the join for the outer model
-            # and the remaining elements are the joins for the inner model
-            outer_join, *inner_joins = join
-            relationship_attr = getattr(model_class, outer_join, None)
-            if relationship_attr:
-                # Apply the join for the outer model and the joins for the inner model
-                query = query.options(
-                    apply_nested_joins(relationship_attr, inner_joins)
-                )
-        else:
-            # If join is a string, it's a join for the current model
-            relationship_attr = getattr(model_class, join, None)
-            if relationship_attr:
-                query = query.options(joinedload(relationship_attr))
-    return query
-
-
-def apply_selector(query, model_class, by, value):
-    if isinstance(by, list) and isinstance(value, list):
-        if len(by) != len(value):
-            raise ValueError("Length of 'by' and 'value' lists must be the same.")
-
-        conditions = [getattr(model_class, b) == v for b, v in zip(by, value)]
-        query = query.filter(and_(*conditions))
-    else:
-        query = query.filter(getattr(model_class, by) == value)
-    return query
-
-
 class Dao:
     """
     Data Access Object (DAO) class to interact with the database.
@@ -87,6 +55,17 @@ class Dao:
         obj_db.updated_at = self.now
         self.db_session.commit()
         return obj_db
+
+    def __apply_selector(self, query, by, value):
+        if isinstance(by, list) and isinstance(value, list):
+            if len(by) != len(value):
+                raise ValueError("Length of 'by' and 'value' lists must be the same.")
+
+            conditions = [getattr(self.model_class, b) == v for b, v in zip(by, value)]
+            query = query.filter(and_(*conditions))
+        else:
+            query = query.filter(getattr(self.model_class, by) == value)
+        return query
 
     def create(self, obj_data: Dict[str, Any]) -> int:
         try:
@@ -122,11 +101,8 @@ class Dao:
         joins: Optional[List[str]] = None,
     ):
         query = self.db_session.query(self.model_class)
-        if joins:
-            query = apply_joins(query, self.model_class, joins)
-
-        query = apply_selector(query, self.model_class, by, value)
-
+        query = self.__apply_joins(query, joins)
+        query = self.__apply_selector(query, by, value)
         return query.first()
 
     def __apply_filter(self, query, filter):
