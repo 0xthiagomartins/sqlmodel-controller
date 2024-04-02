@@ -109,10 +109,10 @@ class Dao:
                 ]
                 message = ", ".join(message_parts)
                 raise Exception(
-                    f"Erro ao criar {self.model_class.__name__}. Entrada duplicada: {message}."
+                    f"Error creating {self.model_class.__name__}. Duplicate entry: {message}."
                 )
             raise Exception(
-                f"{e} ao criar o {self.model_class.__name__} no banco de dados."
+                f"{e} when creating {self.model_class.__name__} in the database."
             )
 
     def get(
@@ -258,10 +258,10 @@ class Dao:
                 message = ", ".join(message_parts)
 
                 raise Exception(
-                    f"Erro ao atualizar {self.model_class.__name__}. Entrada duplicada: {message}."
+                    f"Error updating {self.model_class.__name__}. Duplicate entry: {message}."
                 )
             raise Exception(
-                f"{e} ao atualizar o {self.model_class.__name__} no banco de dados."
+                f"{e} when updating the {self.model_class.__name__} in the database."
             )
 
     def upsert(self, by: Optional[str], value: Optional[Any], obj_data):
@@ -293,10 +293,10 @@ class Dao:
                 message = ", ".join(message_parts)
 
                 raise Exception(
-                    f"Erro ao Upsert {self.model_class.__name__}. Entrada duplicada: {message}."
+                    f"Upsert {self.model_class.__name__} error. Duplicate entry: {message}."
                 )
             raise Exception(
-                f"{e} ao Upsert o {self.model_class.__name__} no banco de dados."
+                f"{e} to Upsert {self.model_class.__name__} in the database."
             )
 
     def archive(self, by: str, value: Any):
