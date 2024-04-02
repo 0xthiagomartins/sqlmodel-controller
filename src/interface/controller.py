@@ -1,7 +1,7 @@
 from typing import Any, Optional, List
 from ...connection.sqlmodel.mysql import get_engine
 from sqlalchemy.orm import Query
-from sqlmodel import Session
+from sqlmodel import Session, SQLModel
 import math
 from werkzeug.exceptions import BadRequest
 from .dao import Dao
@@ -79,9 +79,22 @@ def paginate(query, current_page: int, per_page: int, to_dict: bool = True):
         return page_data
 
 
-class Controller:
-    engine = get_engine()
-    model_class = None
+class Controller[ModelClass: SQLModel]:
+    def __init__(self):
+        """
+        Initializes the controller.
+
+        Args:
+            model_class: The model class to use in the controller.
+        """
+        self.engine = get_engine()
+
+    def __name__(self):
+        return self.model_class.__name__
+
+    @property
+    def model_class(self) -> ModelClass:
+        return self.__orig_class__.__args__[0]
 
     def _normalizer_dao_data(self, db_data_object, joins=None):
         """
