@@ -32,12 +32,12 @@ class Dao:
     def __init__(self, db_session, model_class):
         self.db_session = db_session
         self.model_class = model_class
-        self.now = datetime.utcnow().replace(tzinfo=utc)
+        self.now = datetime.now().replace(tzinfo=utc)
 
-    def _exclude_none_from_dict(self, data: dict) -> dict:
+    def __exclude_none_from_dict(self, data: dict) -> dict:
         return {k: v for k, v in data.items() if v is not None}
 
-    def _populate_to_create(self, obj_data: Dict[str, Any]):
+    def __populate_to_create(self, obj_data: Dict[str, Any]):
         self.model = self.model_class(**obj_data)
         self.model.created_at = self.now
         self.model.updated_at = self.now
@@ -48,8 +48,8 @@ class Dao:
         self.db_session.commit()
         return self.model.id
 
-    def _populate_to_update(self, obj_db, obj_data: Dict[str, Any]):
-        data_parsed = self._exclude_none_from_dict(obj_data)
+    def __populate_to_update(self, obj_db, obj_data: Dict[str, Any]):
+        data_parsed = self.__exclude_none_from_dict(obj_data)
         for field, value in data_parsed.items():
             setattr(obj_db, field, value)
         obj_db.updated_at = self.now
@@ -69,7 +69,7 @@ class Dao:
 
     def create(self, obj_data: Dict[str, Any]) -> int:
         try:
-            return self._populate_to_create(obj_data)
+            return self.__populate_to_create(obj_data)
         except SQLAlchemyError as e:
             if "1062" in str(e):
                 duplicate_values = (
@@ -238,7 +238,7 @@ class Dao:
     def update(self, by, value, obj_data: Dict[str, Any]) -> int:
         try:
             obj_db = self.get(by=by, value=value)
-            updated_obj_db = self._populate_to_update(obj_db, obj_data)
+            updated_obj_db = self.__populate_to_update(obj_db, obj_data)
             return updated_obj_db.id
         except SQLAlchemyError as e:
             if "1062" in str(e):
@@ -271,7 +271,7 @@ class Dao:
             if not obj_db:
                 return self.create(obj_data)
             else:
-                _object_updated = self._populate_to_update(obj_db, obj_data)
+                _object_updated = self.__populate_to_update(obj_db, obj_data)
                 self.db_session.add(_object_updated)
                 self.db_session.commit()
                 return obj_db.id
@@ -304,7 +304,7 @@ class Dao:
         try:
             query = self.db_session.query(self.model_class)
 
-            query = apply_selector(query, self.model_class, by, value)
+            query = self.__apply_selector(query, by, value)
 
             records_to_archive = query.all()
 
@@ -324,11 +324,8 @@ class Dao:
     def delete(self, by: str, value: Any):
         try:
             query = self.db_session.query(self.model_class)
-
-            query = apply_selector(query, self.model_class, by, value)
-
+            query = self.__apply_selector(query, by, value)
             records_to_delete = query.all()
-
             if not records_to_delete:
                 raise NotFound(
                     f"No {self.model_class.__name__} found with {by} = {value}"
