@@ -107,14 +107,27 @@ class Dao:
 
     def __apply_filter(self, query, filter):
         """
-        Example:
-
-        filter = {
-            "col_numeric": {
-                "gte": 0,
-                "lte": 0,
+        filter: dict = {
+            "col1": "value1",
+            "col2": ["value2", "value3"],
+            "col3": {
+                "eq": "value4",
+                "gte": "value5",
+                "lte": "value6",
+                "gt": "value7",
+                "lt": "value8",
+                "in": ["value9", "value10"],
+                "contains": "value11",
+                "like": "value12",
+                "not-eq": "value13",
+                "not-gte": "value14",
+                "not-lte": "value15",
+                "not-gt": "value16",
+                "not-lt": "value17",
+                "not-in": ["value18", "value19"],
+                "not-contains": "value20",
+                "not-like": "value21",
             },
-            "col_string":"value"
         }
         """
         conditions = []
