@@ -209,16 +209,7 @@ class Dao:
                 query = query.filter(getattr(self.model_class, key) == value)
         return query
 
-    def list(
-        self,
-        filter: Dict = {},
-        order: Dict = {},
-        joins: Optional[List[str]] = None,
-    ):
-        query = self.db_session.query(self.model_class)
-        query = self.__apply_filter(query, filter)
-        if joins:
-            query = apply_joins(query, self.model_class, joins)
+    def __apply_ordernation(self, query, order):
         """
         Example:
 
@@ -234,6 +225,38 @@ class Dao:
                     query = query.order_by(column.desc())
                 case "asc":
                     query = query.order_by(column)
+        return query
+
+    def __apply_joins(self, query, joins):
+        if joins:
+            for join in joins:
+                if isinstance(join, list):
+                    # If join is a list, the first element is the join for the outer model
+                    # and the remaining elements are the joins for the inner model
+                    outer_join, *inner_joins = join
+                    relationship_attr = getattr(self.model_class, outer_join, None)
+                    if relationship_attr:
+                        # Apply the join for the outer model and the joins for the inner model
+                        query = query.options(
+                            apply_nested_joins(relationship_attr, inner_joins)
+                        )
+                else:
+                    # If join is a string, it's a join for the current model
+                    relationship_attr = getattr(self.model_class, join, None)
+                    if relationship_attr:
+                        query = query.options(joinedload(relationship_attr))
+        return query
+
+    def list(
+        self,
+        filter: Dict = {},
+        order: Dict = {},
+        joins: Optional[List[str]] = None,
+    ):
+        query = self.db_session.query(self.model_class)
+        query = self.__apply_filter(query, filter)
+        query = self.__apply_joins(query, joins)
+        query = self.__apply_ordernation(query, order)
         return query
 
     def update(self, by, value, obj_data: Dict[str, Any]) -> int:
