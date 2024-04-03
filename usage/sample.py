@@ -14,12 +14,8 @@ class PersonModel(BaseID, table=table):
     nickname: str = Field(max_length=100)
 
 
-class PersonController(Controller):
-    model_class = PersonModel
-
-
 if __name__ == "__main__":
-    controller = PersonController()
+    controller = Controller[PersonModel]()
     person_id = controller.create(
         data={
             "tax_id": "123456789",
