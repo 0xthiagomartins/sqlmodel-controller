@@ -89,9 +89,6 @@ class Controller[ModelClass: SQLModel]:
         """
         self.engine = get_engine()
 
-    def __name__(self):
-        return self.model_class.__name__
-
     @property
     def model_class(self) -> ModelClass:
         return self.__orig_class__.__args__[0]
