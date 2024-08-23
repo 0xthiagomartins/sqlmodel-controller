@@ -2,7 +2,7 @@ import pytest
 from datetime import datetime, date
 from enum import Enum
 from sqlmodel import Field, SQLModel
-from src.model import BaseModel, BaseArchived, BaseID
+from sqlmodel_controller.model import BaseModel, BaseArchived, BaseID
 
 
 @pytest.mark.skip(reason="Not a test class")

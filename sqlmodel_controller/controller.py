@@ -1,5 +1,5 @@
 from typing import Any, Optional, List, TypeVar, Generic
-from src.connection import get_engine
+from .connection import get_engine
 from sqlalchemy.orm import Query
 from sqlmodel import Session, SQLModel
 import math

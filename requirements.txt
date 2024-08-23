@@ -2,9 +2,12 @@ mysql-connector-python
 pg8000
 sqlmodel
 pydantic
+pytest-cov
 sqlalchemy-utils
 sqlalchemy-json
 pytz
 python-dotenv
 pytest
 werkzeug
+twine 
+build

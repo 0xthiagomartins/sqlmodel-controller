@@ -2,8 +2,8 @@ import pytest
 from datetime import date
 from sqlmodel import SQLModel, create_engine
 from sqlmodel.pool import StaticPool
-from src.interface.controller import Controller
-from src.model import BaseID
+from sqlmodel_controller.controller import Controller
+from sqlmodel_controller.model import BaseID
 
 
 class PersonModel(BaseID, table=True):

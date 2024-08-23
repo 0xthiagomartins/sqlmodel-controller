@@ -108,6 +108,29 @@ This guide will help you set up the project for development and testing.
 
 This project follows PEP 8 style guide. You can use tools like `flake8` or `black` to ensure your code adheres to the style guide:
 
+## Documentation
+
+When adding new features or making changes, please update the relevant documentation in the `docs/` directory and add docstrings to your functions and classes.
+
+## Troubleshooting
+
+If you encounter any issues during setup or testing, please check the following:
+
+1. Ensure your Python version is 3.8 or higher:
+   ```
+   python --version
+   ```
+
+2. Make sure all dependencies are installed correctly:
+   ```
+   pip list
+   ```
+
+3. Verify that your `.env` file is set up correctly and in the right location.
+
+If you still face issues, please open an issue on the GitHub repository with details about your environment and the problem you're experiencing.
+
+
 ## Contributing
 
 Contributions are welcome! Please feel free to submit a Pull Request.
