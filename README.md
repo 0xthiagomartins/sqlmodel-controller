@@ -28,55 +28,26 @@ This guide will help you set up the project for development and testing.
 - Git
 
 ## Installation
-
-1. Clone the repository:
-   ```
-   git clone https://github.com/0xthiagomartins/sqlmodel-controller.git
-   cd sqlmodel-controller
-   ```
-
-2. Create a virtual environment:
-   ```
-   python -m venv venv
-   ```
-
-3. Activate the virtual environment:
-   - On Windows:
-     ```
-     venv\Scripts\activate
-     ```
-   - On macOS and Linux:
-     ```
-     source venv/bin/activate
-     ```
-
-4. Install the project dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+```sh
+$ pip install sqlmodel-controller
+---> 100%
+Successfully installed sqlmodel-controller
+```
 
 ## Configuration
 
 1. Create a `.env` file in the project root directory with the following content:
-   ```
-   DB_TYPE=sqlite
-   DB_NAME=test
-   ```
-   This will use SQLite for development. You can change these settings to use MySQL or PostgreSQL if needed.
 
-## Running Tests
+```sh
+DB_TYPE=mysql
+DB_NAME=test
+DB_USER=root
+DB_PASSWORD=root
+DB_HOST=localhost
+DB_PORT=3306
+```
 
-1. Ensure you're in the project root directory and your virtual environment is activated.
-
-2. Run the tests using pytest:
-   ```
-   pytest
-   ```
-
-3. To run tests with coverage report:
-   ```
-   pytest --cov=src --cov-report=term-missing
-   ```
+This will use SQLite for development. You can change these settings to use MySQL or PostgreSQL if needed.
 
 ## Development Workflow
 

@@ -208,12 +208,12 @@ person_with_address = controller.get(
 The library raises exceptions for various error conditions. It's recommended to use try-except blocks to handle potential errors:
 
 ```python
-from werkzeug.exceptions import NotFound
+from sqlalchemy.exc import NoResultFound
 
 
 try:
     person = controller.get(by="id", value=999999)
-except NotFound:
+except NoResultFound:
     print("Person not found")
 except Exception as e:
     print(f"An error occurred: {str(e)}")
