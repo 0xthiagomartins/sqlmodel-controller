@@ -1,5 +1,4 @@
-import os
-import sys
+import os, sys
 
 # Get the current directory (tests/)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -11,5 +10,5 @@ parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
 # Add the 'src' directory to sys.path
-src_dir = os.path.join(parent_dir, "sqlmodel_controller")
+src_dir = os.path.join(parent_dir, "src")
 sys.path.insert(0, src_dir)

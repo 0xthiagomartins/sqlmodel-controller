@@ -5,15 +5,15 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="sqlmodel-controller",
-    version="0.1.0",
+    version="0.1.2",
     author="Thiago Martins",
     author_email="martins@dmail.ai",
     description="A Controller Interface for basic CRUD operations with SQLModel/SQLAlchemy",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/0xthiagomartins/sqlmodel-controller",
-    packages=find_packages(where="sqlmodel_controller"),
-    package_dir={"": "sqlmodel_controller"},
+    packages=find_packages(where="src"),
+    package_dir={"": "src"},
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
