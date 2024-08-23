@@ -1,11 +1,11 @@
 from typing import Any, Optional, List, TypeVar, Generic
-from ...connection.sqlmodel.mysql import get_engine
+from src.connection import get_engine
 from sqlalchemy.orm import Query
 from sqlmodel import Session, SQLModel
 import math
 from werkzeug.exceptions import BadRequest
-from .dao import Dao
 from pydantic import BaseModel
+from .dao import Dao
 
 
 DEFAULT_PAGE = 1
@@ -61,8 +61,8 @@ ModelClass = TypeVar("ModelClass", bound=SQLModel)
 
 
 class Controller(Generic[ModelClass]):
-    def __init__(self):
-        self.engine = get_engine()
+    def __init__(self, engine=None):
+        self.engine = engine or get_engine()
 
     @property
     def model_class(self) -> type[ModelClass]:
@@ -97,33 +97,39 @@ class Controller(Generic[ModelClass]):
         joins: Optional[List[str]] = None,
     ):
         with Session(self.engine) as session:
-            dao = Dao(session, self.model_class)
+            dao = Dao[self.model_class](session, self.model_class)
             dao_result = dao.get(by, value, joins=joins)
             return self._normalize_dao_data(dao_result, joins=joins)
 
     def list(self, filter: dict = {}, order: dict = {}, joins: list = [], **kwargs):
         with Session(self.engine) as session:
-            query = Dao(session, self.model_class).list(filter, order, joins)
+            query = Dao[self.model_class](session, self.model_class).list(
+                filter, order, joins
+            )
             return self._get_view(query=query, joins=joins, **kwargs)
 
     def create(self, data: dict) -> int:
         with Session(self.engine) as session:
-            return Dao(session, self.model_class).create(data)
+            return Dao[self.model_class](session, self.model_class).create(data)
 
     def update(self, by: str | List[str], value: Any | List[Any], data: dict) -> int:
         with Session(self.engine) as session:
-            return Dao(session, self.model_class).update(by, value, data)
+            return Dao[self.model_class](session, self.model_class).update(
+                by, value, data
+            )
 
     def upsert(
         self, by: Optional[str] = None, value: Optional[Any] = None, data: dict = {}
     ):
         with Session(self.engine) as session:
-            return Dao(session, self.model_class).upsert(by, value, data)
+            return Dao[self.model_class](session, self.model_class).upsert(
+                by, value, data
+            )
 
     def archive(self, by: str | List[str], value: Any | List[Any]):
         with Session(self.engine) as session:
-            Dao(session, self.model_class).archive(by, value)
+            Dao[self.model_class](session, self.model_class).archive(by, value)
 
     def delete(self, by: str | List[str], value: Any | List[Any]):
         with Session(self.engine) as session:
-            Dao(session, self.model_class).delete(by, value)
+            Dao[self.model_class](session, self.model_class).delete(by, value)

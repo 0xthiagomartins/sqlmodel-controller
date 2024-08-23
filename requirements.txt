@@ -1,9 +1,9 @@
 mysql-connector-python
-sqlite3
-psycopg2
+pg8000
 sqlmodel
 pydantic
 sqlalchemy-utils
 sqlalchemy-json
 pytz
 python-dotenv
+pytest

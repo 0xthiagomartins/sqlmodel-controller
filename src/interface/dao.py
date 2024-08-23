@@ -1,36 +1,22 @@
 from datetime import datetime
 from pytz import utc
-from typing import Any, Dict, Optional, List
+from typing import Any, Dict, Optional, List, TypeVar, Generic
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from sqlalchemy import and_, or_, not_
 from werkzeug.exceptions import NotFound
+from sqlmodel import Session, SQLModel
+
+ModelType = TypeVar("ModelType", bound=SQLModel)
 
 
-def apply_nested_joins(relationship_attr, inner_joins):
-    if inner_joins:
-        if isinstance(inner_joins[0], list):
-            return joinedload(relationship_attr).options(
-                apply_nested_joins(
-                    getattr(relationship_attr.mapper.class_, inner_joins[0][0]),
-                    inner_joins[0][1:],
-                )
-            )
-        else:
-            return joinedload(relationship_attr).joinedload(
-                getattr(relationship_attr.mapper.class_, inner_joins[0])
-            )
-    else:
-        return joinedload(relationship_attr)
-
-
-class Dao:
+class Dao(Generic[ModelType]):
     """
     Data Access Object (DAO) class to interact with the database.
     """
 
-    def __init__(self, db_session, model_class):
-        self.db_session = db_session
+    def __init__(self, session: Session, model_class: type[ModelType]):
+        self.db_session = session
         self.model_class = model_class
         self.now = datetime.now().replace(tzinfo=utc)
 
@@ -322,7 +308,9 @@ class Dao:
             records_to_archive = query.all()
 
             if not records_to_archive:
-                raise NotFound(f"No {self.name} found with {by} = {value}")
+                raise NotFound(
+                    f"No {self.model_class.__name__} found with {by} = {value}"
+                )
 
             for record in records_to_archive:
                 record.archived = 1
@@ -331,7 +319,7 @@ class Dao:
 
         except SQLAlchemyError:
             raise Exception(
-                f"Error archiving {self.name} records by {by} = {value} in the database."
+                f"Error archiving {self.model_class.__name__} records by {by} = {value} in the database."
             )
 
     def delete(self, by: str, value: Any):
