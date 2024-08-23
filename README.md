@@ -31,7 +31,7 @@ This guide will help you set up the project for development and testing.
 
 1. Clone the repository:
    ```
-   git clone https://github.com/your-username/sqlmodel-controller.git
+   git clone https://github.com/0xthiagomartins/sqlmodel-controller.git
    cd sqlmodel-controller
    ```
 
