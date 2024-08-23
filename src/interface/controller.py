@@ -6,6 +6,7 @@ import math
 from werkzeug.exceptions import BadRequest
 from pydantic import BaseModel
 from .dao import Dao
+from sqlmodel import select, func
 
 
 DEFAULT_PAGE = 1
@@ -34,14 +35,17 @@ class Page(BaseModel):
         )
 
 
-def paginate(query, current_page: int, per_page: int, to_dict: bool = True):
+def paginate(
+    query, session: Session, current_page: int, per_page: int, to_dict: bool = True
+):
     if current_page < 1:
         raise BadRequest("Page needs to be >= 1")
     if per_page < 1:
         raise BadRequest("The page size needs to be >= 1")
 
-    items = query.limit(per_page).offset((current_page - 1) * per_page).all()
-    total = query.order_by(None).count()
+    offset = (current_page - 1) * per_page
+    items = session.exec(query.offset(offset).limit(per_page)).all()
+    total = session.exec(select(func.count()).select_from(query.subquery())).one()
     page_data = Page.create(items, current_page, per_page, total)
 
     if to_dict:
@@ -73,11 +77,12 @@ class Controller(Generic[ModelClass]):
             return [obj.to_dict(joins=joins) for obj in db_data_object]
         return {} if not db_data_object else db_data_object.to_dict(joins=joins)
 
-    def _get_view(self, query: Query, joins: Optional[List[str]] = None, **kwargs):
+    def _get_view(self, query, session, joins: Optional[List[str]] = None, **kwargs):
         mode = kwargs.get("mode", "all")
         if mode == "paginated":
             view = paginate(
                 query,
+                session=session,
                 current_page=kwargs.get("page", DEFAULT_PAGE),
                 per_page=kwargs.get("per_page", DEFAULT_PER_PAGE),
             )
@@ -85,7 +90,7 @@ class Controller(Generic[ModelClass]):
                 view.get("data_set"), joins=joins
             )
         elif mode == "all":
-            view = self._normalize_dao_data(query.all(), joins=joins)
+            view = self._normalize_dao_data(session.exec(query).all(), joins=joins)
         else:
             view = []
         return view
@@ -103,10 +108,10 @@ class Controller(Generic[ModelClass]):
 
     def list(self, filter: dict = {}, order: dict = {}, joins: list = [], **kwargs):
         with Session(self.engine) as session:
-            query = Dao[self.model_class](session, self.model_class).list(
-                filter, order, joins
-            )
-            return self._get_view(query=query, joins=joins, **kwargs)
+            dao = Dao[self.model_class](session, self.model_class)
+            query = dao.list(filter, order, joins)
+            result = self._get_view(query=query, session=session, joins=joins, **kwargs)
+            return result
 
     def create(self, data: dict) -> int:
         with Session(self.engine) as session:

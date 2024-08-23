@@ -20,6 +20,7 @@ def engine_fixture():
     )
     SQLModel.metadata.create_all(engine)
     yield engine
+    engine.dispose()  # This will close all connections
     SQLModel.metadata.drop_all(engine)
 
 

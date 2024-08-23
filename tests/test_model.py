@@ -5,11 +5,13 @@ from sqlmodel import Field, SQLModel
 from src.model import BaseModel, BaseArchived, BaseID
 
 
+@pytest.mark.skip(reason="Not a test class")
 class TestEnum(Enum):
     VALUE1 = 1
     VALUE2 = 2
 
 
+@pytest.mark.skip(reason="Not a test class")
 class TestBaseModel(BaseModel):
     test_field: str = Field(default="test")
     test_enum: TestEnum = Field(default=TestEnum.VALUE1)

@@ -1,4 +1,4 @@
-from datetime import datetime, date
+from datetime import datetime, date, UTC
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from enum import Enum
@@ -7,8 +7,8 @@ table = True
 
 
 class BaseModel(SQLModel):
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     def to_dict(self, joins: Optional[list[str]] = None):
         data = {}

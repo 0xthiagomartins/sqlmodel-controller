@@ -7,3 +7,4 @@ sqlalchemy-json
 pytz
 python-dotenv
 pytest
+werkzeug

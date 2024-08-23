@@ -5,9 +5,26 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from sqlalchemy import and_, or_, not_
 from werkzeug.exceptions import NotFound
-from sqlmodel import Session, SQLModel
+from sqlmodel import Session, SQLModel, select
 
 ModelType = TypeVar("ModelType", bound=SQLModel)
+
+
+def apply_nested_joins(relationship_attr, inner_joins):
+    if inner_joins:
+        if isinstance(inner_joins[0], list):
+            return joinedload(relationship_attr).options(
+                apply_nested_joins(
+                    getattr(relationship_attr.mapper.class_, inner_joins[0][0]),
+                    inner_joins[0][1:],
+                )
+            )
+        else:
+            return joinedload(relationship_attr).joinedload(
+                getattr(relationship_attr.mapper.class_, inner_joins[0])
+            )
+    else:
+        return joinedload(relationship_attr)
 
 
 class Dao(Generic[ModelType]):
@@ -48,9 +65,9 @@ class Dao(Generic[ModelType]):
                 raise ValueError("Length of 'by' and 'value' lists must be the same.")
 
             conditions = [getattr(self.model_class, b) == v for b, v in zip(by, value)]
-            query = query.filter(and_(*conditions))
+            query = query.where(and_(*conditions))
         else:
-            query = query.filter(getattr(self.model_class, by) == value)
+            query = query.where(getattr(self.model_class, by) == value)
         return query
 
     def create(self, obj_data: Dict[str, Any]) -> int:
@@ -86,10 +103,10 @@ class Dao(Generic[ModelType]):
         value: Any | List[Any],
         joins: Optional[List[str]] = None,
     ):
-        query = self.db_session.query(self.model_class)
+        query = select(self.model_class)
         query = self.__apply_joins(query, joins)
         query = self.__apply_selector(query, by, value)
-        return query.first()
+        return self.db_session.exec(query).first()
 
     def __apply_filter(self, query, filter):
         """
@@ -143,7 +160,7 @@ class Dao(Generic[ModelType]):
                         getattr(self.model_class, key).contains(value["contains"])
                     )
                 if "like" in value:
-                    query = query.filter(
+                    query = query.where(
                         getattr(self.model_class, key).like(value["like"])
                     )
                 if "not-eq" in value:
@@ -171,7 +188,7 @@ class Dao(Generic[ModelType]):
                         not_(getattr(self.model_class, key).in_(value["not-in"]))
                     )
                 if "not-like" in value:
-                    query = query.filter(
+                    query = query.where(
                         not_(getattr(self.model_class, key).like(value["not-like"]))
                     )
                 if "not-contains" in value:
@@ -179,9 +196,9 @@ class Dao(Generic[ModelType]):
                         not_(getattr(self.model_class, key).contains(value["contains"]))
                     )
                 if range_filters:
-                    query = query.filter(and_(*range_filters))
+                    query = query.where(and_(*range_filters))
             else:
-                query = query.filter(getattr(self.model_class, key) == value)
+                query = query.where(getattr(self.model_class, key) == value)
         return query
 
     def __apply_ordernation(self, query, order):
@@ -228,7 +245,7 @@ class Dao(Generic[ModelType]):
         order: Dict = {},
         joins: Optional[List[str]] = None,
     ):
-        query = self.db_session.query(self.model_class)
+        query = select(self.model_class)
         query = self.__apply_filter(query, filter)
         query = self.__apply_joins(query, joins)
         query = self.__apply_ordernation(query, order)
@@ -301,11 +318,11 @@ class Dao(Generic[ModelType]):
 
     def archive(self, by: str, value: Any):
         try:
-            query = self.db_session.query(self.model_class)
+            query = select(self.model_class)
 
             query = self.__apply_selector(query, by, value)
 
-            records_to_archive = query.all()
+            records_to_archive = self.db_session.exec(query).all()
 
             if not records_to_archive:
                 raise NotFound(
@@ -324,9 +341,9 @@ class Dao(Generic[ModelType]):
 
     def delete(self, by: str, value: Any):
         try:
-            query = self.db_session.query(self.model_class)
+            query = select(self.model_class)
             query = self.__apply_selector(query, by, value)
-            records_to_delete = query.all()
+            records_to_delete = self.db_session.exec(query).all()
             if not records_to_delete:
                 raise NotFound(
                     f"No {self.model_class.__name__} found with {by} = {value}"
