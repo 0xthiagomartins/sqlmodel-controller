@@ -14,7 +14,7 @@ DEFAULT_PER_PAGE = 25
 
 
 class Page(BaseModel):
-    items: List[Any]
+    data_set: List[Any]
     previous_page: Optional[int]
     next_page: Optional[int]
     has_previous: bool
@@ -23,13 +23,15 @@ class Page(BaseModel):
     pages: int
 
     @classmethod
-    def create(cls, items: List[Any], page: int, page_size: int, total: int):
+    def create(cls, data_set: List[Any], page: int, page_size: int, total: int):
         return cls(
-            items=items,
+            data_set=data_set,
             previous_page=page - 1 if page > 1 else None,
-            next_page=page + 1 if (page - 1) * page_size + len(items) < total else None,
+            next_page=(
+                page + 1 if (page - 1) * page_size + len(data_set) < total else None
+            ),
             has_previous=page > 1,
-            has_next=(page - 1) * page_size + len(items) < total,
+            has_next=(page - 1) * page_size + len(data_set) < total,
             total=total,
             pages=int(math.ceil(total / float(page_size))),
         )
@@ -44,13 +46,13 @@ def paginate(
         raise BadRequest("The page size needs to be >= 1")
 
     offset = (current_page - 1) * per_page
-    items = session.exec(query.offset(offset).limit(per_page)).all()
+    data_set = session.exec(query.offset(offset).limit(per_page)).all()
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
-    page_data = Page.create(items, current_page, per_page, total)
+    page_data = Page.create(data_set, current_page, per_page, total)
 
     if to_dict:
         return {
-            "data_set": page_data.items,
+            "data_set": page_data.data_set,
             "current": current_page,
             "per_page": per_page,
             "total_pages": page_data.pages,
