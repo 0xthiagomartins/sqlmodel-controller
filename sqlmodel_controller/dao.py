@@ -4,13 +4,23 @@ from typing import Any, Dict, Optional, List, TypeVar, Generic
 from sqlalchemy.exc import SQLAlchemyError
 from sqlalchemy.orm import joinedload
 from sqlalchemy import and_, or_, not_
-from werkzeug.exceptions import NotFound
+from sqlalchemy.exc import NoResultFound
 from sqlmodel import Session, SQLModel, select
 
 ModelType = TypeVar("ModelType", bound=SQLModel)
 
 
 def apply_nested_joins(relationship_attr, inner_joins):
+    """
+    Apply nested joins to a relationship attribute.
+
+    Args:
+        relationship_attr: The relationship attribute to join.
+        inner_joins: A list of inner joins to apply.
+
+    Returns:
+        A joinedload object with nested joins applied.
+    """
     if inner_joins:
         if isinstance(inner_joins[0], list):
             return joinedload(relationship_attr).options(
@@ -30,17 +40,50 @@ def apply_nested_joins(relationship_attr, inner_joins):
 class Dao(Generic[ModelType]):
     """
     Data Access Object (DAO) class to interact with the database.
+
+    This class provides methods for CRUD operations and advanced querying
+    on SQLModel-based database models.
+
+    Attributes:
+        db_session (Session): The SQLAlchemy session object.
+        model_class (type[ModelType]): The SQLModel class this DAO operates on.
+        now (datetime): The current UTC timestamp.
     """
 
     def __init__(self, session: Session, model_class: type[ModelType]):
+        """
+        Initialize the DAO with a database session and model class.
+
+        Args:
+            session (Session): The SQLAlchemy session object.
+            model_class (type[ModelType]): The SQLModel class this DAO operates on.
+        """
         self.db_session = session
         self.model_class = model_class
         self.now = datetime.now().replace(tzinfo=utc)
 
     def __exclude_none_from_dict(self, data: dict) -> dict:
+        """
+        Remove None values from a dictionary.
+
+        Args:
+            data (dict): The input dictionary.
+
+        Returns:
+            dict: A new dictionary with None values removed.
+        """
         return {k: v for k, v in data.items() if v is not None}
 
     def __populate_to_create(self, obj_data: Dict[str, Any]):
+        """
+        Populate a new model instance with data for creation.
+
+        Args:
+            obj_data (Dict[str, Any]): The data to populate the model with.
+
+        Returns:
+            int: The ID of the newly created model instance.
+        """
         self.model = self.model_class(**obj_data)
         self.model.created_at = self.now
         self.model.updated_at = self.now
@@ -52,6 +95,16 @@ class Dao(Generic[ModelType]):
         return self.model.id
 
     def __populate_to_update(self, obj_db, obj_data: Dict[str, Any]):
+        """
+        Update an existing model instance with new data.
+
+        Args:
+            obj_db: The existing model instance to update.
+            obj_data (Dict[str, Any]): The new data to update the model with.
+
+        Returns:
+            The updated model instance.
+        """
         data_parsed = self.__exclude_none_from_dict(obj_data)
         for field, value in data_parsed.items():
             setattr(obj_db, field, value)
@@ -60,6 +113,20 @@ class Dao(Generic[ModelType]):
         return obj_db
 
     def __apply_selector(self, query, by, value):
+        """
+        Apply a selector to a query based on column(s) and value(s).
+
+        Args:
+            query: The base query to apply the selector to.
+            by (str | List[str]): The column(s) to filter by.
+            value (Any | List[Any]): The value(s) to filter with.
+
+        Returns:
+            The query with the selector applied.
+
+        Raises:
+            ValueError: If the lengths of 'by' and 'value' lists don't match.
+        """
         if isinstance(by, list) and isinstance(value, list):
             if len(by) != len(value):
                 raise ValueError("Length of 'by' and 'value' lists must be the same.")
@@ -71,6 +138,18 @@ class Dao(Generic[ModelType]):
         return query
 
     def create(self, obj_data: Dict[str, Any]) -> int:
+        """
+        Create a new instance of the model in the database.
+
+        Args:
+            obj_data (Dict[str, Any]): The data to create the new instance with.
+
+        Returns:
+            int: The ID of the newly created instance.
+
+        Raises:
+            Exception: If there's an error during creation, including duplicate entries.
+        """
         try:
             return self.__populate_to_create(obj_data)
         except SQLAlchemyError as e:
@@ -103,6 +182,17 @@ class Dao(Generic[ModelType]):
         value: Any | List[Any],
         joins: Optional[List[str]] = None,
     ):
+        """
+        Retrieve a single instance of the model from the database.
+
+        Args:
+            by (str | List[str]): The column(s) to filter by.
+            value (Any | List[Any]): The value(s) to filter with.
+            joins (Optional[List[str]]): Optional list of relationships to join.
+
+        Returns:
+            The first matching instance of the model, or None if not found.
+        """
         query = select(self.model_class)
         query = self.__apply_joins(query, joins)
         query = self.__apply_selector(query, by, value)
@@ -110,28 +200,14 @@ class Dao(Generic[ModelType]):
 
     def __apply_filter(self, query, filter):
         """
-        filter: dict = {
-            "col1": "value1",
-            "col2": ["value2", "value3"],
-            "col3": {
-                "eq": "value4",
-                "gte": "value5",
-                "lte": "value6",
-                "gt": "value7",
-                "lt": "value8",
-                "in": ["value9", "value10"],
-                "contains": "value11",
-                "like": "value12",
-                "not-eq": "value13",
-                "not-gte": "value14",
-                "not-lte": "value15",
-                "not-gt": "value16",
-                "not-lt": "value17",
-                "not-in": ["value18", "value19"],
-                "not-contains": "value20",
-                "not-like": "value21",
-            },
-        }
+        Apply complex filters to a query.
+
+        Args:
+            query: The base query to apply filters to.
+            filter (dict): A dictionary specifying the filters to apply.
+
+        Returns:
+            The query with all specified filters applied.
         """
         conditions = []
         for key, value in filter.items():
@@ -203,12 +279,14 @@ class Dao(Generic[ModelType]):
 
     def __apply_ordernation(self, query, order):
         """
-        Example:
+        Apply ordering to a query.
 
-        order: dict =  {
-                "col1": "asc" # ascending
-                "col2": "desc" # descending
-            }
+        Args:
+            query: The base query to apply ordering to.
+            order (dict): A dictionary specifying the ordering to apply.
+
+        Returns:
+            The query with the specified ordering applied.
         """
         for column, direction in order.items():
             column = getattr(self.model_class, column)
@@ -220,6 +298,16 @@ class Dao(Generic[ModelType]):
         return query
 
     def __apply_joins(self, query, joins):
+        """
+        Apply joins to a query.
+
+        Args:
+            query: The base query to apply joins to.
+            joins (Optional[List[str]]): A list of relationships to join.
+
+        Returns:
+            The query with the specified joins applied.
+        """
         if joins:
             for join in joins:
                 if isinstance(join, list):
@@ -245,6 +333,17 @@ class Dao(Generic[ModelType]):
         order: Dict = {},
         joins: Optional[List[str]] = None,
     ):
+        """
+        Retrieve a list of model instances based on filters, ordering, and joins.
+
+        Args:
+            filter (Dict): Filters to apply to the query.
+            order (Dict): Ordering to apply to the query.
+            joins (Optional[List[str]]): Optional list of relationships to join.
+
+        Returns:
+            A query object that can be further refined or executed.
+        """
         query = select(self.model_class)
         query = self.__apply_filter(query, filter)
         query = self.__apply_joins(query, joins)
@@ -252,6 +351,20 @@ class Dao(Generic[ModelType]):
         return query
 
     def update(self, by, value, obj_data: Dict[str, Any]) -> int:
+        """
+        Update an existing instance of the model in the database.
+
+        Args:
+            by (str | List[str]): The column(s) to identify the instance to update.
+            value (Any | List[Any]): The value(s) to identify the instance to update.
+            obj_data (Dict[str, Any]): The new data to update the instance with.
+
+        Returns:
+            int: The ID of the updated instance.
+
+        Raises:
+            Exception: If there's an error during update, including duplicate entries.
+        """
         try:
             obj_db = self.get(by=by, value=value)
             updated_obj_db = self.__populate_to_update(obj_db, obj_data)
@@ -282,6 +395,20 @@ class Dao(Generic[ModelType]):
             )
 
     def upsert(self, by: Optional[str], value: Optional[Any], obj_data):
+        """
+        Insert a new instance or update an existing one if it already exists.
+
+        Args:
+            by (Optional[str]): The column to identify an existing instance.
+            value (Optional[Any]): The value to identify an existing instance.
+            obj_data (Dict[str, Any]): The data for the new or updated instance.
+
+        Returns:
+            int: The ID of the upserted instance.
+
+        Raises:
+            Exception: If there's an error during upsert, including duplicate entries.
+        """
         try:
             obj_db = self.get(by, value)
             if not obj_db:
@@ -325,7 +452,7 @@ class Dao(Generic[ModelType]):
             records_to_archive = self.db_session.exec(query).all()
 
             if not records_to_archive:
-                raise NotFound(
+                raise NoResultFound(
                     f"No {self.model_class.__name__} found with {by} = {value}"
                 )
 
@@ -345,7 +472,7 @@ class Dao(Generic[ModelType]):
             query = self.__apply_selector(query, by, value)
             records_to_delete = self.db_session.exec(query).all()
             if not records_to_delete:
-                raise NotFound(
+                raise NoResultFound(
                     f"No {self.model_class.__name__} found with {by} = {value}"
                 )
 
