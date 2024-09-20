@@ -136,6 +136,10 @@ class Controller(Generic[ModelClass]):
         """
         return self.__orig_class__.__args__[0]
 
+    @property
+    def Dao(self):
+        return Dao[self.model_class]
+
     def _normalize_dao_data(self, db_data_object, joins=None):
         """
         Normalizes data returned from the DAO to a dictionary format.
@@ -199,7 +203,7 @@ class Controller(Generic[ModelClass]):
             Union[dict, List[dict]]: The retrieved record(s) as a dictionary or list of dictionaries.
         """
         with Session(self.engine) as session:
-            dao = Dao[self.model_class](session, self.model_class)
+            dao = self.Dao(session, self.model_class)
             dao_result = dao.get(by, value, joins=joins)
             return self._normalize_dao_data(dao_result, joins=joins)
 
@@ -217,12 +221,12 @@ class Controller(Generic[ModelClass]):
             Union[dict, List[dict]]: The query results in the specified format.
         """
         with Session(self.engine) as session:
-            dao = Dao[self.model_class](session, self.model_class)
+            dao = self.Dao(session, self.model_class)
             query = dao.list(filter, order, joins)
             result = self._get_view(query=query, session=session, joins=joins, **kwargs)
             return result
 
-    def create(self, data: dict) -> int:
+    def create(self, data: dict, returns_object: bool = False) -> int | dict:
         """
         Creates a new record in the database.
 
@@ -233,7 +237,9 @@ class Controller(Generic[ModelClass]):
             int: The ID of the newly created record.
         """
         with Session(self.engine) as session:
-            return Dao[self.model_class](session, self.model_class).create(data)
+            dao = self.Dao(session, self.model_class)
+            result = dao.create(data, returns_object)
+        return result
 
     def update(self, by: str | List[str], value: Any | List[Any], data: dict) -> int:
         """

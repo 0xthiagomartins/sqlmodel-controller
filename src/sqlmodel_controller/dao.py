@@ -74,12 +74,15 @@ class Dao(Generic[ModelType]):
         """
         return {k: v for k, v in data.items() if v is not None}
 
-    def __populate_to_create(self, obj_data: Dict[str, Any]):
+    def __populate_to_create(
+        self, obj_data: Dict[str, Any], returns_object: bool = False
+    ):
         """
         Populate a new model instance with data for creation.
 
         Args:
             obj_data (Dict[str, Any]): The data to populate the model with.
+            returns_object (bool): If True, the method will return the created object.
 
         Returns:
             int: The ID of the newly created model instance.
@@ -92,7 +95,11 @@ class Dao(Generic[ModelType]):
 
         self.db_session.add(self.model)
         self.db_session.commit()
-        return self.model.id
+        return (
+            self.model.id
+            if not returns_object
+            else self.get(by="id", value=self.model.id).to_dict()
+        )
 
     def __populate_to_update(self, obj_db, obj_data: Dict[str, Any]):
         """
@@ -137,13 +144,13 @@ class Dao(Generic[ModelType]):
             query = query.where(getattr(self.model_class, by) == value)
         return query
 
-    def create(self, obj_data: Dict[str, Any]) -> int:
+    def create(self, obj_data: Dict[str, Any], returns_object: bool = False) -> int:
         """
         Create a new instance of the model in the database.
 
         Args:
             obj_data (Dict[str, Any]): The data to create the new instance with.
-
+            returns_object (bool): If True, the method will return the created object.
         Returns:
             int: The ID of the newly created instance.
 
@@ -151,7 +158,7 @@ class Dao(Generic[ModelType]):
             Exception: If there's an error during creation, including duplicate entries.
         """
         try:
-            return self.__populate_to_create(obj_data)
+            return self.__populate_to_create(obj_data, returns_object)
         except SQLAlchemyError as e:
             if "1062" in str(e):
                 duplicate_values = (

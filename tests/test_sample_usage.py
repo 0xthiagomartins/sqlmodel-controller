@@ -46,7 +46,7 @@ def test_create_person(controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     person_id = controller.create(data=person_data)
     assert person_id is not None
@@ -57,7 +57,7 @@ def test_upsert_person(controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     controller.create(data=person_data)
 
@@ -78,7 +78,7 @@ def test_update_person(controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     person_id = controller.create(data=person_data)
 
@@ -92,7 +92,7 @@ def test_get_person(controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     person_id = controller.create(data=person_data)
 
@@ -125,7 +125,7 @@ def test_archive_person(controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     person_id = controller.create(data=person_data)
 
@@ -139,7 +139,7 @@ def test_delete_person(controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     person_id = controller.create(data=person_data)
 
@@ -186,7 +186,7 @@ def test_get_person_with_joins(controller, address_controller):
         "tax_id": "123456789",
         "name": "Thiago Martin",
         "birth_date": date(1990, 1, 1),
-        "nickname": "thiago",
+        "nickname": "0xthiagomartins",
     }
     person_id = controller.create(data=person_data)
 
@@ -239,3 +239,15 @@ def test_list_persons_with_pagination_and_order(controller):
     assert paginated_result["total_pages"] == 4
     assert paginated_result["data_set"][0]["name"] == "Person 14"
     assert paginated_result["data_set"][-1]["name"] == "Person 18"
+
+
+def test_returns_object(controller):
+    person_data = {
+        "tax_id": "123456789",
+        "name": "Thiago Martins",
+        "birth_date": date(1990, 1, 1),
+        "nickname": "0xthiagomartins",
+    }
+    person_id = controller.create(data=person_data, returns_object=True)
+    print(person_id)
+    assert person_id.get("name") == "Thiago Martins"

@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="sqlmodel-controller",
-    version="0.1.2",
+    version="0.1.3",
     author="Thiago Martins",
     author_email="martins@dmail.ai",
     description="A Controller Interface for basic CRUD operations with SQLModel/SQLAlchemy",
