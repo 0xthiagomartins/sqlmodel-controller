@@ -63,43 +63,7 @@ class Dao(Generic[ModelType]):
         self.now = datetime.now().replace(tzinfo=utc)
 
     def __exclude_none_from_dict(self, data: dict) -> dict:
-        """
-        Remove None values from a dictionary.
-
-        Args:
-            data (dict): The input dictionary.
-
-        Returns:
-            dict: A new dictionary with None values removed.
-        """
         return {k: v for k, v in data.items() if v is not None}
-
-    def __populate_to_create(
-        self, obj_data: Dict[str, Any], returns_object: bool = False
-    ):
-        """
-        Populate a new model instance with data for creation.
-
-        Args:
-            obj_data (Dict[str, Any]): The data to populate the model with.
-            returns_object (bool): If True, the method will return the created object.
-
-        Returns:
-            int: The ID of the newly created model instance.
-        """
-        self.model = self.model_class(**obj_data)
-        self.model.created_at = self.now
-        self.model.updated_at = self.now
-        if hasattr(self.model, "archived"):
-            self.model.archived = 0
-
-        self.db_session.add(self.model)
-        self.db_session.commit()
-        return (
-            self.model.id
-            if not returns_object
-            else self.get(by="id", value=self.model.id).to_dict()
-        )
 
     def __populate_to_update(self, obj_db, obj_data: Dict[str, Any]):
         """
@@ -144,13 +108,13 @@ class Dao(Generic[ModelType]):
             query = query.where(getattr(self.model_class, by) == value)
         return query
 
-    def create(self, obj_data: Dict[str, Any], returns_object: bool = False) -> int:
+    def create(self, obj_data: Dict[str, Any]) -> int:
         """
         Create a new instance of the model in the database.
 
         Args:
             obj_data (Dict[str, Any]): The data to create the new instance with.
-            returns_object (bool): If True, the method will return the created object.
+
         Returns:
             int: The ID of the newly created instance.
 
@@ -158,7 +122,16 @@ class Dao(Generic[ModelType]):
             Exception: If there's an error during creation, including duplicate entries.
         """
         try:
-            return self.__populate_to_create(obj_data, returns_object)
+            self.model = self.model_class(**obj_data)
+            self.model.created_at = self.now
+            self.model.updated_at = self.now
+            if hasattr(self.model, "archived"):
+                self.model.archived = 0
+
+            self.db_session.add(self.model)
+            self.db_session.commit()
+            return self.model.id
+
         except SQLAlchemyError as e:
             if "1062" in str(e):
                 duplicate_values = (

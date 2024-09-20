@@ -1,6 +1,5 @@
 from typing import Any, Optional, List, TypeVar, Generic
 from .connection import get_engine
-from sqlalchemy.orm import Query
 from sqlmodel import Session, SQLModel
 import math
 from pydantic import BaseModel
@@ -238,7 +237,12 @@ class Controller(Generic[ModelClass]):
         """
         with Session(self.engine) as session:
             dao = self.Dao(session, self.model_class)
-            result = dao.create(data, returns_object)
+            obj_id = dao.create(data)
+            if returns_object:
+                obj = dao.get(by="id", value=obj_id)
+                result = self._normalize_dao_data(obj)
+            else:
+                result = obj_id
         return result
 
     def update(self, by: str | List[str], value: Any | List[Any], data: dict) -> int:
