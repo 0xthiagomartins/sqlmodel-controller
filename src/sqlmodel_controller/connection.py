@@ -1,10 +1,7 @@
 import os, logging
 from dotenv import load_dotenv
 from sqlmodel import create_engine
-import mysql.connector
 import sqlite3
-from pg8000.native import Connection as PgConnection
-from pg8000.exceptions import DatabaseError, InterfaceError
 from ssl import create_default_context
 
 
@@ -27,6 +24,7 @@ def get_engine():
     elif config["type"] == "sqlite":
         db_uri = f"sqlite:///{config['name']}.db"
     elif config["type"] == "postgres":
+
         db_uri = f"postgresql+pg8000://{config['user']}:{config['password']}@{config['host']}:{config['port']}/{config['name']}"
     else:
         raise ValueError(f"Unsupported database type: {config['type']}")
@@ -37,6 +35,8 @@ def test_conn():
     config = get_db_config()
     try:
         if config["type"] == "mysql":
+            import mysql.connector
+
             conn = mysql.connector.connect(
                 host=config["host"],
                 user=config["user"],
@@ -46,6 +46,9 @@ def test_conn():
         elif config["type"] == "sqlite":
             conn = sqlite3.connect(f"{config['name']}.db")
         elif config["type"] == "postgres":
+            from pg8000.native import Connection as PgConnection
+            from pg8000.exceptions import DatabaseError, InterfaceError
+
             ssl_context = create_default_context()
             conn = PgConnection(
                 user=config["user"],
