@@ -65,12 +65,12 @@ class Dao(Generic[ModelType]):
     def __exclude_none_from_dict(self, data: dict) -> dict:
         return {k: v for k, v in data.items() if v is not None}
 
-    def __populate_to_update(self, obj_db, obj_data: Dict[str, Any]):
+    def __populate_to_update(self, model: ModelType, obj_data: Dict[str, Any]):
         """
         Update an existing model instance with new data.
 
         Args:
-            obj_db: The existing model instance to update.
+            model: The existing model instance to update.
             obj_data (Dict[str, Any]): The new data to update the model with.
 
         Returns:
@@ -78,10 +78,8 @@ class Dao(Generic[ModelType]):
         """
         data_parsed = self.__exclude_none_from_dict(obj_data)
         for field, value in data_parsed.items():
-            setattr(obj_db, field, value)
-        obj_db.updated_at = self.now
-        self.db_session.commit()
-        return obj_db
+            setattr(model, field, value)
+        model.updated_at = self.now
 
     def __apply_selector(self, query, by, value):
         """
@@ -108,7 +106,7 @@ class Dao(Generic[ModelType]):
             query = query.where(getattr(self.model_class, by) == value)
         return query
 
-    def create(self, obj_data: Dict[str, Any]) -> int:
+    def create(self, obj_data: Dict[str, Any]) -> ModelType:
         """
         Create a new instance of the model in the database.
 
@@ -129,8 +127,7 @@ class Dao(Generic[ModelType]):
                 self.model.archived = 0
 
             self.db_session.add(self.model)
-            self.db_session.commit()
-            return self.model.id
+            return self.model
 
         except SQLAlchemyError as e:
             if "1062" in str(e):
@@ -161,7 +158,7 @@ class Dao(Generic[ModelType]):
         by: str | List[str],
         value: Any | List[Any],
         joins: Optional[List[str]] = None,
-    ):
+    ) -> ModelType:
         """
         Retrieve a single instance of the model from the database.
 
@@ -176,7 +173,8 @@ class Dao(Generic[ModelType]):
         query = select(self.model_class)
         query = self.__apply_joins(query, joins)
         query = self.__apply_selector(query, by, value)
-        return self.db_session.exec(query).first()
+        model = self.db_session.exec(query).first()
+        return model
 
     def __apply_filter(self, query, filter):
         """
@@ -330,7 +328,7 @@ class Dao(Generic[ModelType]):
         query = self.__apply_ordernation(query, order)
         return query
 
-    def update(self, by, value, obj_data: Dict[str, Any]) -> int:
+    def update(self, by, value, obj_data: Dict[str, Any]) -> ModelType:
         """
         Update an existing instance of the model in the database.
 
@@ -346,9 +344,9 @@ class Dao(Generic[ModelType]):
             Exception: If there's an error during update, including duplicate entries.
         """
         try:
-            obj_db = self.get(by=by, value=value)
-            updated_obj_db = self.__populate_to_update(obj_db, obj_data)
-            return updated_obj_db.id
+            model = self.get(by=by, value=value)
+            self.__populate_to_update(model, obj_data)
+            return model
         except SQLAlchemyError as e:
             if "1062" in str(e):
                 duplicate_values = (
@@ -390,14 +388,13 @@ class Dao(Generic[ModelType]):
             Exception: If there's an error during upsert, including duplicate entries.
         """
         try:
-            obj_db = self.get(by, value)
-            if not obj_db:
-                return self.create(obj_data)
+            model = self.get(by, value)
+            if not model:
+                model = self.create(obj_data)
             else:
-                _object_updated = self.__populate_to_update(obj_db, obj_data)
-                self.db_session.add(_object_updated)
-                self.db_session.commit()
-                return obj_db.id
+                self.__populate_to_update(model, obj_data)
+                self.db_session.add(model)
+            return model.id                
         except SQLAlchemyError as e:
             if "1062" in str(e):
                 duplicate_values = (
@@ -439,8 +436,6 @@ class Dao(Generic[ModelType]):
             for record in records_to_archive:
                 record.archived = 1
 
-            self.db_session.commit()
-
         except SQLAlchemyError:
             raise Exception(
                 f"Error archiving {self.model_class.__name__} records by {by} = {value} in the database."
@@ -459,8 +454,10 @@ class Dao(Generic[ModelType]):
             for record in records_to_delete:
                 self.db_session.delete(record)
 
-            self.db_session.commit()
         except SQLAlchemyError:
             raise Exception(
                 f"Error deleting {self.model_class.__name__} records by {by} = {value} in the database."
             )
+
+    def commit(self):
+        self.db_session.commit()

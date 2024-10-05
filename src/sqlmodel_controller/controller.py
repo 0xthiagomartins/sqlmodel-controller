@@ -5,6 +5,7 @@ import math
 from pydantic import BaseModel
 from .dao import Dao
 from sqlmodel import select, func
+from sqlalchemy.exc import SQLAlchemyError
 
 
 DEFAULT_PAGE = 1
@@ -139,7 +140,7 @@ class Controller(Generic[ModelClass]):
     def Dao(self):
         return Dao[self.model_class]
 
-    def _normalize_dao_data(self, db_data_object, joins=None):
+    def _normalize_dao_data(self, db_data_object: ModelClass, joins=None):
         """
         Normalizes data returned from the DAO to a dictionary format.
 
@@ -203,8 +204,9 @@ class Controller(Generic[ModelClass]):
         """
         with Session(self.engine) as session:
             dao = self.Dao(session, self.model_class)
-            dao_result = dao.get(by, value, joins=joins)
-            return self._normalize_dao_data(dao_result, joins=joins)
+            model = dao.get(by, value, joins=joins)
+            view = self._normalize_dao_data(model, joins=joins)
+        return view
 
     def list(self, filter: dict = {}, order: dict = {}, joins: list = [], **kwargs):
         """
@@ -222,8 +224,8 @@ class Controller(Generic[ModelClass]):
         with Session(self.engine) as session:
             dao = self.Dao(session, self.model_class)
             query = dao.list(filter, order, joins)
-            result = self._get_view(query=query, session=session, joins=joins, **kwargs)
-            return result
+            view = self._get_view(query=query, session=session, joins=joins, **kwargs)
+        return view
 
     def create(self, data: dict, returns_object: bool = False) -> int | dict:
         """
@@ -237,13 +239,14 @@ class Controller(Generic[ModelClass]):
         """
         with Session(self.engine) as session:
             dao = self.Dao(session, self.model_class)
-            obj_id = dao.create(data)
-            if returns_object:
-                obj = dao.get(by="id", value=obj_id)
-                result = self._normalize_dao_data(obj)
+            model = dao.create(data)
+            view = self._normalize_dao_data(model, joins=None)
+            dao.commit()
+            if not returns_object:
+                view = model.id
             else:
-                result = obj_id
-        return result
+                view["id"] = model.id
+        return view
 
     def update(self, by: str | List[str], value: Any | List[Any], data: dict) -> int:
         """
@@ -258,9 +261,10 @@ class Controller(Generic[ModelClass]):
             int: The number of records updated.
         """
         with Session(self.engine) as session:
-            return Dao[self.model_class](session, self.model_class).update(
-                by, value, data
-            )
+            dao = self.Dao(session, self.model_class)
+            view = dao.update(by, value, data)
+            dao.commit()
+            return view
 
     def upsert(
         self, by: Optional[str] = None, value: Optional[Any] = None, data: dict = {}
@@ -277,9 +281,10 @@ class Controller(Generic[ModelClass]):
             int: The ID of the upserted record.
         """
         with Session(self.engine) as session:
-            return Dao[self.model_class](session, self.model_class).upsert(
-                by, value, data
-            )
+            dao = self.Dao(session, self.model_class)
+            view = dao.upsert(by, value, data)
+            dao.commit()
+            return view
 
     def archive(self, by: str | List[str], value: Any | List[Any]):
         """
@@ -290,7 +295,10 @@ class Controller(Generic[ModelClass]):
             value (Any | List[Any]): The value(s) to identify the record(s) to archive.
         """
         with Session(self.engine) as session:
-            Dao[self.model_class](session, self.model_class).archive(by, value)
+            dao = self.Dao(session, self.model_class)
+            view = dao.archive(by, value)
+            dao.commit()
+            return view
 
     def delete(self, by: str | List[str], value: Any | List[Any]):
         """
@@ -301,4 +309,7 @@ class Controller(Generic[ModelClass]):
             value (Any | List[Any]): The value(s) to identify the record(s) to delete.
         """
         with Session(self.engine) as session:
-            Dao[self.model_class](session, self.model_class).delete(by, value)
+            dao = self.Dao(session, self.model_class)
+            view = dao.delete(by, value)
+            dao.commit()
+            return view

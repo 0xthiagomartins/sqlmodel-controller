@@ -242,12 +242,11 @@ def test_list_persons_with_pagination_and_order(controller):
 
 
 def test_returns_object(controller):
-    person_data = {
+    payload = {
         "tax_id": "123456789",
         "name": "Thiago Martins",
         "birth_date": date(1990, 1, 1),
         "nickname": "0xthiagomartins",
     }
-    person_id = controller.create(data=person_data, returns_object=True)
-    print(person_id)
-    assert person_id.get("name") == "Thiago Martins"
+    person: dict = controller.create(data=payload, returns_object=True)
+    assert person.get("name") == payload.get("name")
