@@ -394,7 +394,7 @@ class Dao(Generic[ModelType]):
             else:
                 self.__populate_to_update(model, obj_data)
                 self.db_session.add(model)
-            return model.id                
+            return model
         except SQLAlchemyError as e:
             if "1062" in str(e):
                 duplicate_values = (
@@ -458,6 +458,3 @@ class Dao(Generic[ModelType]):
             raise Exception(
                 f"Error deleting {self.model_class.__name__} records by {by} = {value} in the database."
             )
-
-    def commit(self):
-        self.db_session.commit()

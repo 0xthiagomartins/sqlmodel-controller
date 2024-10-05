@@ -117,6 +117,8 @@ class Controller(Generic[ModelClass]):
         engine: The SQLAlchemy engine to use for database connections.
     """
 
+    session: Session | None
+
     def __init__(self, engine=None):
         """
         Initializes the Controller with a database engine.
@@ -125,6 +127,16 @@ class Controller(Generic[ModelClass]):
             engine (optional): The SQLAlchemy engine to use. If not provided, it will be obtained using get_engine().
         """
         self.engine = engine or get_engine()
+        self.session = None
+
+    def __enter__(self):
+        if not self.session:
+            self.session = Session(self.engine)
+        return self.session
+
+    def __exit__(self, type_: Any, value: Any, traceback: Any) -> None:
+        self.session.close()
+        self.session = None
 
     @property
     def model_class(self) -> type[ModelClass]:
@@ -139,21 +151,6 @@ class Controller(Generic[ModelClass]):
     @property
     def Dao(self):
         return Dao[self.model_class]
-
-    def _normalize_dao_data(self, db_data_object: ModelClass, joins=None):
-        """
-        Normalizes data returned from the DAO to a dictionary format.
-
-        Args:
-            db_data_object: The data object(s) returned from the DAO.
-            joins (optional): A list of joined relationships to include in the result.
-
-        Returns:
-            Union[dict, List[dict]]: The normalized data as a dictionary or list of dictionaries.
-        """
-        if isinstance(db_data_object, list):
-            return [obj.to_dict(joins=joins) for obj in db_data_object]
-        return {} if not db_data_object else db_data_object.to_dict(joins=joins)
 
     def _get_view(self, query, session, joins: Optional[List[str]] = None, **kwargs):
         """
@@ -176,11 +173,12 @@ class Controller(Generic[ModelClass]):
                 current_page=kwargs.get("page", DEFAULT_PAGE),
                 per_page=kwargs.get("per_page", DEFAULT_PER_PAGE),
             )
-            view["data_set"] = self._normalize_dao_data(
-                view.get("data_set"), joins=joins
-            )
+            models = view.get("data_set")
+            view["data_set"] = [model.to_dict(joins=joins) for model in models]
+
         elif mode == "all":
-            view = self._normalize_dao_data(session.exec(query).all(), joins=joins)
+            models = session.exec(query).all()
+            view = [model.to_dict(joins=joins) for model in models]
         else:
             view = []
         return view
@@ -202,10 +200,10 @@ class Controller(Generic[ModelClass]):
         Returns:
             Union[dict, List[dict]]: The retrieved record(s) as a dictionary or list of dictionaries.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
             model = dao.get(by, value, joins=joins)
-            view = self._normalize_dao_data(model, joins=joins)
+            view = model.to_dict(joins=joins) if model else {}
         return view
 
     def list(self, filter: dict = {}, order: dict = {}, joins: list = [], **kwargs):
@@ -221,7 +219,7 @@ class Controller(Generic[ModelClass]):
         Returns:
             Union[dict, List[dict]]: The query results in the specified format.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
             query = dao.list(filter, order, joins)
             view = self._get_view(query=query, session=session, joins=joins, **kwargs)
@@ -237,18 +235,24 @@ class Controller(Generic[ModelClass]):
         Returns:
             int: The ID of the newly created record.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
             model = dao.create(data)
-            view = self._normalize_dao_data(model, joins=None)
-            dao.commit()
+            session.commit()
             if not returns_object:
                 view = model.id
             else:
-                view["id"] = model.id
+                session.refresh(model)
+                view = model.to_dict()
         return view
 
-    def update(self, by: str | List[str], value: Any | List[Any], data: dict) -> int:
+    def update(
+        self,
+        by: str | List[str],
+        value: Any | List[Any],
+        data: dict,
+        returns_object: bool = False,
+    ) -> int:
         """
         Updates an existing record or records in the database.
 
@@ -260,15 +264,24 @@ class Controller(Generic[ModelClass]):
         Returns:
             int: The number of records updated.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
-            view = dao.update(by, value, data)
-            dao.commit()
-            return view
+            model = dao.update(by, value, data)
+            session.commit()
+            if not returns_object:
+                view = model.id
+            else:
+                session.refresh(model)
+                view = model.to_dict()
+        return view
 
     def upsert(
-        self, by: Optional[str] = None, value: Optional[Any] = None, data: dict = {}
-    ):
+        self,
+        by: Optional[str] = None,
+        value: Optional[Any] = None,
+        data: dict = {},
+        returns_object: bool = False,
+    ) -> int | dict:
         """
         Inserts a new record or updates an existing one if it already exists.
 
@@ -280,11 +293,16 @@ class Controller(Generic[ModelClass]):
         Returns:
             int: The ID of the upserted record.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
-            view = dao.upsert(by, value, data)
-            dao.commit()
-            return view
+            model = dao.upsert(by, value, data)
+            session.commit()
+            if not returns_object:
+                view = model.id
+            else:
+                session.refresh(model)
+                view = model.to_dict()
+        return view
 
     def archive(self, by: str | List[str], value: Any | List[Any]):
         """
@@ -294,11 +312,10 @@ class Controller(Generic[ModelClass]):
             by (str | List[str]): The column(s) to identify the record(s) to archive.
             value (Any | List[Any]): The value(s) to identify the record(s) to archive.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
-            view = dao.archive(by, value)
-            dao.commit()
-            return view
+            dao.archive(by, value)
+            session.commit()
 
     def delete(self, by: str | List[str], value: Any | List[Any]):
         """
@@ -308,8 +325,7 @@ class Controller(Generic[ModelClass]):
             by (str | List[str]): The column(s) to identify the record(s) to delete.
             value (Any | List[Any]): The value(s) to identify the record(s) to delete.
         """
-        with Session(self.engine) as session:
+        with self as session:
             dao = self.Dao(session, self.model_class)
-            view = dao.delete(by, value)
-            dao.commit()
-            return view
+            dao.delete(by, value)
+            session.commit()
