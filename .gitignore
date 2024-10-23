@@ -34,4 +34,5 @@ var/
 *.egg-info/
 .installed.cfg
 *.egg
+.VSCodeCounter/*
 coverage.xml
