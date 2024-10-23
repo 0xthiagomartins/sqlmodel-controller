@@ -1,5 +1,7 @@
 # sqlmodel-controller
 
+[![Coverage Status](https://coveralls.io/repos/github/0xthiagomartins/sqlmodel-controller/badge.svg?branch=main)](https://coveralls.io/github/0xthiagomartins/sqlmodel-controller?branch=main)
+
 A Controller Interface for basic CRUD operations with SQLModel/SQLAlchemy
 
 ## Overview
