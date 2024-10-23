@@ -334,3 +334,7 @@ Contributions are welcome! Please feel free to submit a Pull Request.
 ## License
 
 This project is licensed under the MIT License.
+
+## Code of Conduct
+
+We adhere to the [Code of Conduct](CODE_OF_CONDUCT.md). By participating, you are expected to uphold this code. Please report any unacceptable behavior to [martins@dmail.ai](mailto:martins@dmail.ai).
