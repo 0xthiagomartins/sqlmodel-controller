@@ -1,8 +1,9 @@
-from datetime import datetime, date, UTC
+from datetime import datetime, date, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from enum import Enum
 
+UTC = timezone.utc
 table = True
 
 
