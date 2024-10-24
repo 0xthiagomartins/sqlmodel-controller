@@ -131,8 +131,9 @@ class Controller(Generic[ModelClass]):
         return self
 
     def __exit__(self, type_: Any, value: Any, traceback: Any) -> None:
-        self.session.close()
-        self.session = None
+        if self.session is None:
+            self.session.close()
+            self.session = None
 
     @property
     def model_class(self) -> type[ModelClass]:
