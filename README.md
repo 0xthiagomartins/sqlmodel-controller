@@ -1,6 +1,6 @@
 # sqlmodel-controller
 
-[![codecov](https://codecov.io/gh/0xthiagomartins/sqlmodel-controller/graph/badge.svg?token=AWYNPI0GIV)](https://codecov.io/gh/0xthiagomartins/sqlmodel-controller)
+[![Code Coverage](https://codecov.io/gh/0xthiagomartins/sqlmodel-controller/graph/badge.svg?token=AWYNPI0GIV)](https://codecov.io/gh/0xthiagomartins/sqlmodel-controller)
 
 A Controller Interface for basic CRUD operations with SQLModel/SQLAlchemy
 

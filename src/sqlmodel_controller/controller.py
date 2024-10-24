@@ -132,7 +132,7 @@ class Controller(Generic[ModelClass]):
     def __enter__(self):
         if not self.session:
             self.session = Session(self.engine)
-        return self.session
+        return self
 
     def __exit__(self, type_: Any, value: Any, traceback: Any) -> None:
         self.session.close()
@@ -151,6 +151,14 @@ class Controller(Generic[ModelClass]):
     @property
     def Dao(self):
         return Dao[self.model_class]
+
+    def __get_return(self, model, returns_object):
+        if not returns_object:
+            view = model.id
+        else:
+            self.session.refresh(model)
+            view = model.to_dict()
+        return view
 
     def _get_view(self, query, session, joins: Optional[List[str]] = None, **kwargs):
         """
@@ -200,8 +208,8 @@ class Controller(Generic[ModelClass]):
         Returns:
             Union[dict, List[dict]]: The retrieved record(s) as a dictionary or list of dictionaries.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             model = dao.get(by, value, joins=joins)
             view = model.to_dict(joins=joins) if model else {}
         return view
@@ -219,10 +227,12 @@ class Controller(Generic[ModelClass]):
         Returns:
             Union[dict, List[dict]]: The query results in the specified format.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             query = dao.list(filter, order, joins)
-            view = self._get_view(query=query, session=session, joins=joins, **kwargs)
+            view = self._get_view(
+                query=query, session=self.session, joins=joins, **kwargs
+            )
         return view
 
     def create(self, data: dict, returns_object: bool = False) -> int | dict:
@@ -235,15 +245,11 @@ class Controller(Generic[ModelClass]):
         Returns:
             int: The ID of the newly created record.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             model = dao.create(data)
-            session.commit()
-            if not returns_object:
-                view = model.id
-            else:
-                session.refresh(model)
-                view = model.to_dict()
+            self.session.commit()
+            view = self.__get_return(model, returns_object)
         return view
 
     def update(
@@ -264,15 +270,11 @@ class Controller(Generic[ModelClass]):
         Returns:
             int: The number of records updated.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             model = dao.update(by, value, data)
-            session.commit()
-            if not returns_object:
-                view = model.id
-            else:
-                session.refresh(model)
-                view = model.to_dict()
+            self.session.commit()
+            view = self.__get_return(model, returns_object)
         return view
 
     def upsert(
@@ -293,15 +295,11 @@ class Controller(Generic[ModelClass]):
         Returns:
             int: The ID of the upserted record.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             model = dao.upsert(by, value, data)
-            session.commit()
-            if not returns_object:
-                view = model.id
-            else:
-                session.refresh(model)
-                view = model.to_dict()
+            self.session.commit()
+            view = self.__get_return(model, returns_object)
         return view
 
     def archive(self, by: str | List[str], value: Any | List[Any]):
@@ -312,10 +310,10 @@ class Controller(Generic[ModelClass]):
             by (str | List[str]): The column(s) to identify the record(s) to archive.
             value (Any | List[Any]): The value(s) to identify the record(s) to archive.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             dao.archive(by, value)
-            session.commit()
+            self.session.commit()
 
     def delete(self, by: str | List[str], value: Any | List[Any]):
         """
@@ -325,7 +323,7 @@ class Controller(Generic[ModelClass]):
             by (str | List[str]): The column(s) to identify the record(s) to delete.
             value (Any | List[Any]): The value(s) to identify the record(s) to delete.
         """
-        with self as session:
-            dao = self.Dao(session, self.model_class)
+        with self:
+            dao = self.Dao(self.session, self.model_class)
             dao.delete(by, value)
-            session.commit()
+            self.session.commit()
