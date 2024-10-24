@@ -61,9 +61,7 @@ class Page(BaseModel):
         )
 
 
-def paginate(
-    query, session: Session, current_page: int, per_page: int, to_dict: bool = True
-):
+def paginate(query, session: Session, current_page: int, per_page: int):
     """
     Paginates a query result.
 
@@ -90,17 +88,15 @@ def paginate(
     total = session.exec(select(func.count()).select_from(query.subquery())).one()
     page_data = Page.create(data_set, current_page, per_page, total)
 
-    if to_dict:
-        return {
-            "data_set": page_data.data_set,
-            "current": current_page,
-            "per_page": per_page,
-            "total_pages": page_data.pages,
-            "total_data": page_data.total,
-            "previous": page_data.previous_page,
-            "next": page_data.next_page,
-        }
-    return page_data
+    return {
+        "data_set": page_data.data_set,
+        "current": current_page,
+        "per_page": per_page,
+        "total_pages": page_data.pages,
+        "total_data": page_data.total,
+        "previous": page_data.previous_page,
+        "next": page_data.next_page,
+    }
 
 
 ModelClass = TypeVar("ModelClass", bound=SQLModel)
@@ -184,11 +180,9 @@ class Controller(Generic[ModelClass]):
             models = view.get("data_set")
             view["data_set"] = [model.to_dict(joins=joins) for model in models]
 
-        elif mode == "all":
+        else:
             models = session.exec(query).all()
             view = [model.to_dict(joins=joins) for model in models]
-        else:
-            view = []
         return view
 
     def get(

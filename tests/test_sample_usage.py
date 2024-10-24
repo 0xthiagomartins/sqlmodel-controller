@@ -250,3 +250,15 @@ def test_returns_object(controller):
     }
     person: dict = controller.create(data=payload, returns_object=True)
     assert person.get("name") == payload.get("name")
+
+
+def test_paginate_invalid_current_page(controller):
+    with pytest.raises(ValueError) as exc_info:
+        controller.list(mode="paginated", page=0, per_page=10)
+    assert str(exc_info.value) == "Page needs to be >= 1"
+
+
+def test_paginate_invalid_per_page(controller):
+    with pytest.raises(ValueError) as exc_info:
+        controller.list(mode="paginated", page=1, per_page=0)
+    assert str(exc_info.value) == "The page size needs to be >= 1"
