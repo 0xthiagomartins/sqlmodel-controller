@@ -2,6 +2,8 @@ from datetime import datetime, date, timezone
 from typing import Optional
 from sqlmodel import Field, SQLModel
 from enum import Enum
+import uuid
+from uuid import UUID
 
 UTC = timezone.utc
 table = True
@@ -45,3 +47,7 @@ class BaseArchived(BaseModel):
 
 class BaseID(BaseArchived):
     id: int = Field(primary_key=True, default=None)
+
+
+class BaseUUID(BaseArchived):
+    id: UUID = Field(default_factory=uuid.uuid4, primary_key=True, index=True)
