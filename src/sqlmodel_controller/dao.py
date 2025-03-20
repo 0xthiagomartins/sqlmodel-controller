@@ -420,6 +420,51 @@ class Dao(Generic[ModelType]):
                 f"{e} to Upsert {self.model_class.__name__} in the database."
             )
 
+    def declare(self, by: Optional[str], value: Optional[Any], obj_data) -> ModelType:
+        """
+        Insert a new instance if it doesn't exist, or return the existing one without updating.
+
+        Args:
+            by (Optional[str]): The column to identify an existing instance.
+            value (Optional[Any]): The value to identify an existing instance.
+            obj_data (Dict[str, Any]): The data for the new instance if it needs to be created.
+
+        Returns:
+            ModelType: The created or existing model instance.
+
+        Raises:
+            Exception: If there's an error during declaration, including duplicate entries.
+        """
+        try:
+            model = self.get(by, value)
+            if not model:
+                model = self.create(obj_data)
+            return model
+        except SQLAlchemyError as e:
+            if "1062" in str(e):
+                duplicate_values = (
+                    str(e)
+                    .split("Duplicate entry")[1]
+                    .split("for key")[0]
+                    .strip()
+                    .split("-")
+                )
+                column_details = (
+                    str(e).split("for key")[1].split("\n")[0].strip().split(".")
+                )
+                columns = column_details[-1].split("_")[1:-1]
+                message_parts = [
+                    f"{col} = {val}" for col, val in zip(columns, duplicate_values)
+                ]
+                message = ", ".join(message_parts)
+
+                raise Exception(
+                    f"Declare {self.model_class.__name__} error. Duplicate entry: {message}."
+                )
+            raise Exception(
+                f"{e} to Declare {self.model_class.__name__} in the database."
+            )
+
     def archive(self, by: str, value: Any):
         try:
             query = select(self.model_class)

@@ -146,6 +146,30 @@ selector = {"by": "tax_id", "value": "123456789"}
 person_id: int = controller.upsert(**selector, data=upsert_data)
 ```
 
+### Declare
+
+Similar to upsert, but will not update existing records. Useful when you want to ensure a record exists but don't want to modify it if it's already there.
+
+```python
+person_data = {
+    "tax_id": "123456789",
+    "name": "Thiago Martins",
+    "birth_date": date(1990, 1, 1),
+    "nickname": "0xthiagomartins",
+}
+selector = {"by": "tax_id", "value": "123456789"}
+person_id: int = controller.declare(**selector, data=person_data)
+
+# If called again with different data, the existing record will be returned unchanged
+different_data = {
+    "tax_id": "123456789",
+    "name": "Different Name",  # This will be ignored if record exists
+    "birth_date": date(2002, 1, 1),  # This will be ignored if record exists
+    "nickname": "different",  # This will be ignored if record exists
+}
+same_person_id = controller.declare(**selector, data=different_data)  # Returns existing record's ID
+```
+
 ### Archive
 
 ```python

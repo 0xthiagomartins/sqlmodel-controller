@@ -297,6 +297,32 @@ class Controller(Generic[ModelClass]):
             view = self.__get_return(model, returns_object)
         return view
 
+    def declare(
+        self,
+        by: Optional[str] = None,
+        value: Optional[Any] = None,
+        data: dict = {},
+        returns_object: bool = False,
+    ) -> int | dict:
+        """
+        Creates a new record if it doesn't exist, or returns the existing one without updating.
+
+        Args:
+            by (Optional[str], optional): The column to identify an existing record.
+            value (Optional[Any], optional): The value to identify an existing record.
+            data (dict, optional): The data for the new record if it needs to be created.
+            returns_object (bool, optional): Whether to return the full object or just the ID.
+
+        Returns:
+            Union[int, dict]: The ID of the record or the full record object if returns_object is True.
+        """
+        with self:
+            dao = self.Dao(self.session, self.model_class)
+            model = dao.declare(by, value, data)
+            self.session.commit()
+            view = self.__get_return(model, returns_object)
+        return view
+
     def archive(self, by: str | List[str], value: Any | List[Any]):
         """
         Archives (soft deletes) a record or records in the database.

@@ -36,3 +36,4 @@ var/
 *.egg
 .VSCodeCounter/*
 coverage.xml
+metadata.json

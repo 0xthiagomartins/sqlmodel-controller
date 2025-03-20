@@ -289,3 +289,45 @@ def test_uuid(ctrl_user):
     import uuid
 
     assert isinstance(uuid.UUID(str(user_id)), uuid.UUID)
+
+
+def test_declare_person(ctrl_person):
+    # First declare - should create
+    person_data = {
+        "tax_id": "123456789",
+        "name": "Thiago Martin",
+        "birth_date": date(1990, 1, 1),
+        "nickname": "0xthiagomartins",
+    }
+    person_id = ctrl_person.declare(by="tax_id", value="123456789", data=person_data)
+    assert person_id is not None
+
+    # Verify the person was created correctly
+    person = ctrl_person.get(by="id", value=person_id)
+    assert person["tax_id"] == "123456789"
+    assert person["name"] == "Thiago Martin"
+    assert person["birth_date"] == "1990-01-01"
+    assert person["nickname"] == "0xthiagomartins"
+
+    # Try to declare again with different data - should return existing record without changes
+    updated_data = {
+        "tax_id": "123456789",
+        "name": "Different Name",
+        "birth_date": date(2002, 1, 1),
+        "nickname": "different_nickname",
+    }
+    same_person_id = ctrl_person.declare(
+        by="tax_id", value="123456789", data=updated_data
+    )
+    assert same_person_id == person_id
+
+    # Verify the person wasn't updated
+    same_person = ctrl_person.get(by="id", value=same_person_id)
+    assert same_person["tax_id"] == "123456789"
+    assert same_person["name"] == "Thiago Martin"  # Name should not have changed
+    assert (
+        same_person["birth_date"] == "1990-01-01"
+    )  # Birth date should not have changed
+    assert (
+        same_person["nickname"] == "0xthiagomartins"
+    )  # Nickname should not have changed
